@@ -26,6 +26,7 @@
   }
 })();
 
+var clicks = 0;
 /**
  * Container class to manage connecting to the WebXR Device API
  * and handle rendering on every frame.
@@ -94,13 +95,15 @@ class App {
 
   /** Place a sunflower when the screen is tapped. */
   onSelect = () => {
-    if (window.sunflower) {
+    if (window.sunflower && this.reticle.visible == true) {
       const clone = window.sunflower.clone();
       clone.position.copy(this.reticle.position);
-      this.scene.add(clone)
+      clone.scale.set(0.3,0.3,0.3);
+      this.scene.add(clone);
 
       const shadowMesh = this.scene.children.find(c => c.name === 'shadowMesh');
       shadowMesh.position.y = clone.position.y;
+      clicks++;
     }
   }
 
@@ -140,11 +143,17 @@ class App {
         this.stabilized = true;
         document.body.classList.add('stabilized');
       }
+
       if (hitTestResults.length > 0) {
         const hitPose = hitTestResults[0].getPose(this.localReferenceSpace);
 
         // Update the reticle position
-        this.reticle.visible = true;
+        if(clicks < 1){
+          this.reticle.visible = true;
+        }else if(clicks => 1){
+          this.reticle.visible = false;
+        }
+        
         this.reticle.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z)
         this.reticle.updateMatrixWorld(true);
       }
