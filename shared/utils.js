@@ -14,6 +14,7 @@
  */
 
 window.gltfLoader = new THREE.GLTFLoader();
+
 /**
  * The Reticle class creates an object that repeatedly calls
  * `xrSession.requestHitTest()` to render a ring along a found
@@ -21,6 +22,7 @@ window.gltfLoader = new THREE.GLTFLoader();
  */
 class Reticle extends THREE.Object3D {
   constructor() {
+
     super();
 
     this.loader = new THREE.GLTFLoader();
@@ -38,6 +40,8 @@ window.gltfLoader.load("../toroid_scene.gltf", function(gltf) {
   window.sunflower = gltf.scene;
 });
 
+
+
 window.DemoUtils = {
   /**
    * Creates a THREE.Scene containing lights that case shadows,
@@ -45,6 +49,35 @@ window.DemoUtils = {
    *
    * @return {THREE.Scene}
    */
+  createCubeScene() {
+    const scene = new THREE.Scene();
+
+    const materials = [
+      new THREE.MeshBasicMaterial({ color: 0xff0000 }),
+      new THREE.MeshBasicMaterial({ color: 0x0000ff }),
+      new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
+      new THREE.MeshBasicMaterial({ color: 0xff00ff }),
+      new THREE.MeshBasicMaterial({ color: 0x00ffff }),
+      new THREE.MeshBasicMaterial({ color: 0xffff00 })
+    ];
+
+    const ROW_COUNT = 4;
+    const SPREAD = 1;
+    const HALF = ROW_COUNT / 2;
+    for (let i = 0; i < ROW_COUNT; i++) {
+      for (let j = 0; j < ROW_COUNT; j++) {
+        for (let k = 0; k < ROW_COUNT; k++) {
+          const box = new THREE.Mesh(new THREE.BoxBufferGeometry(0.2, 0.2, 0.2), materials);
+          box.position.set(i - HALF, j - HALF, k - HALF);
+          box.position.multiplyScalar(SPREAD);
+          scene.add(box);
+        }
+      }
+    }
+
+    return scene;
+  },
+
   createLitScene() {
     const scene = new THREE.Scene();
 
@@ -90,34 +123,6 @@ window.DemoUtils = {
    *
    * @return {THREE.Scene}
    */
-  createCubeScene() {
-    const scene = new THREE.Scene();
-
-    const materials = [
-      new THREE.MeshBasicMaterial({ color: 0xff0000 }),
-      new THREE.MeshBasicMaterial({ color: 0x0000ff }),
-      new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
-      new THREE.MeshBasicMaterial({ color: 0xff00ff }),
-      new THREE.MeshBasicMaterial({ color: 0x00ffff }),
-      new THREE.MeshBasicMaterial({ color: 0xffff00 })
-    ];
-
-    const ROW_COUNT = 4;
-    const SPREAD = 1;
-    const HALF = ROW_COUNT / 2;
-    for (let i = 0; i < ROW_COUNT; i++) {
-      for (let j = 0; j < ROW_COUNT; j++) {
-        for (let k = 0; k < ROW_COUNT; k++) {
-          const box = new THREE.Mesh(new THREE.BoxBufferGeometry(0.2, 0.2, 0.2), materials);
-          box.position.set(i - HALF, j - HALF, k - HALF);
-          box.position.multiplyScalar(SPREAD);
-          scene.add(box);
-        }
-      }
-    }
-
-    return scene;
-  },
 };
 
 /**

@@ -17,6 +17,7 @@
  * Query for WebXR support. If there's no support for the `immersive-ar` mode,
  * show an error.
  */
+
 (async function() {
   const isArSessionSupported = navigator.xr && navigator.xr.isSessionSupported && await navigator.xr.isSessionSupported("immersive-ar");
   if (isArSessionSupported) {
@@ -26,12 +27,49 @@
   }
 })();
 
-var clicks = 0;
+let clicks = 0;
+
 /**
  * Container class to manage connecting to the WebXR Device API
  * and handle rendering on every frame.
  */
 class App {
+
+  setupThreeJs() {
+    // To help with working with 3D on the web, we'll use three.js.
+    // Set up the WebGLRenderer, which handles rendering to our session's base layer.
+    this.renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      preserveDrawingBuffer: true,
+      canvas: this.canvas,
+      context: this.gl
+    });
+    this.renderer.autoClear = false;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Initialize our demo scene.
+    this.scene = DemoUtils.createLitScene();
+    this.reticle = new Reticle();
+    this.scene.add(this.reticle);
+
+    // We'll update the camera matrices directly from API, so
+    // disable matrix auto updates so three.js doesn't attempt
+    // to handle the matrices independently.
+    this.camera = new THREE.PerspectiveCamera();
+    this.camera.matrixAutoUpdate = false;
+
+    this.orbitControls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+    this.transformControls = new THREE.TransformControls(this.camera, this.renderer.domElement);
+    this.transformControls.addEventListener("dragging-changed", (e) => {
+      orbitControls.enabled = !event.value
+      console.log('Dragging state changed:', e.value);
+    });
+
+    this.scene.add(this.transformControls);
+  }
+
+
   /**
    * Run when the Start AR button is pressed.
    */
@@ -46,9 +84,11 @@ class App {
       // Create the canvas that will contain our camera's background and our virtual scene.
       this.createXRCanvas();
 
+      /** this.orbitControls = new THREE.OrbitControls(this.camera, this.renderer.domElement); */
+
       // With everything set up, start the app.
       await this.onSessionStarted();
-    } catch(e) {
+    } catch (e) {
       console.log(e);
       onNoXRDevice();
     }
@@ -104,6 +144,9 @@ class App {
       const shadowMesh = this.scene.children.find(c => c.name === 'shadowMesh');
       shadowMesh.position.y = clone.position.y;
       clicks++;
+
+      this.transformControls.attach(clone); // Attach the cloned sunflower to TransformControls
+      this.transformControls.setMode("rotate");
     }
   }
 
@@ -150,7 +193,7 @@ class App {
         // Update the reticle position
         if(clicks < 1){
           this.reticle.visible = true;
-        }else if(clicks => 1){
+        }else if(clicks >= 1){
           this.reticle.visible = false;
         }
         
@@ -158,39 +201,21 @@ class App {
         this.reticle.updateMatrixWorld(true);
       }
 
+      if (this.clone) {
+        this.transformControls.update();
+        this.orbitControls.update();
+      }  
+      
       // Render the scene with THREE.WebGLRenderer.
       this.renderer.render(this.scene, this.camera)
     }
   }
-
+  
   /**
    * Initialize three.js specific rendering code, including a WebGLRenderer,
    * a demo scene, and a camera for viewing the 3D content.
    */
-  setupThreeJs() {
-    // To help with working with 3D on the web, we'll use three.js.
-    // Set up the WebGLRenderer, which handles rendering to our session's base layer.
-    this.renderer = new THREE.WebGLRenderer({
-      alpha: true,
-      preserveDrawingBuffer: true,
-      canvas: this.canvas,
-      context: this.gl
-    });
-    this.renderer.autoClear = false;
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-    // Initialize our demo scene.
-    this.scene = DemoUtils.createLitScene();
-    this.reticle = new Reticle();
-    this.scene.add(this.reticle);
-
-    // We'll update the camera matrices directly from API, so
-    // disable matrix auto updates so three.js doesn't attempt
-    // to handle the matrices independently.
-    this.camera = new THREE.PerspectiveCamera();
-    this.camera.matrixAutoUpdate = false;
-  }
+  
 };
 
 window.app = new App();
