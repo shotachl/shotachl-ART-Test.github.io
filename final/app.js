@@ -1,23 +1,3 @@
-/*
- * Copyright 2017 Google Inc. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/**
- * Query for WebXR support. If there's no support for the `immersive-ar` mode,
- * show an error.
- */
-
 (async function() {
   const isArSessionSupported = navigator.xr && navigator.xr.isSessionSupported && await navigator.xr.isSessionSupported("immersive-ar");
   if (isArSessionSupported) {
@@ -34,7 +14,6 @@ let clicks = 0;
  * and handle rendering on every frame.
  */
 class App {
-
   setupThreeJs() {
     // To help with working with 3D on the web, we'll use three.js.
     // Set up the WebGLRenderer, which handles rendering to our session's base layer.
@@ -53,22 +32,115 @@ class App {
     this.reticle = new Reticle();
     this.scene.add(this.reticle);
 
+  
+
     // We'll update the camera matrices directly from API, so
     // disable matrix auto updates so three.js doesn't attempt
     // to handle the matrices independently.
     this.camera = new THREE.PerspectiveCamera();
     this.camera.matrixAutoUpdate = false;
 
-    this.orbitControls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-    this.transformControls = new THREE.TransformControls(this.camera, this.renderer.domElement);
-    this.transformControls.addEventListener("dragging-changed", (e) => {
-      orbitControls.enabled = !event.value
-      console.log('Dragging state changed:', e.value);
-    });
+    // this.orbitControls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+    this.transformControls = new THREE.TransformControls(this.camera, this.renderer.domElement, renderer);
 
     this.scene.add(this.transformControls);
+
+    this.renderer.domElement.addEventListener('touchstart', onTouchStart, false);
+    document.addEventListener('touchmove', this.onTouchMove);
+    this.renderer.domElement.addEventListener('touchend', onTouchEnd, false);
+    
+    function test(event){
+      const touch = event.changedTouches[0];
+      
+      if (this.scene) {
+        this.scene.rotation.set(touch.clientX,10,10);
+        document.querySelector('#test').innerHTML=this.scene;
+      }
+    }
+    function onTouchStart(event) {
+      const touch = event.changedTouches[0];
+      const marker = document.createElement('div');
+      marker.style.position = 'absolute';
+      marker.style.width = '10px';
+      marker.style.height = '10px';
+      marker.style.background = 'red';
+      marker.style.top = `${touch.clientY}px`;
+      marker.style.left = `${touch.clientX}px`;
+      document.body.appendChild(marker);
+    
+      setTimeout(() => marker.remove(), 1000);
+
+
+      event.preventDefault();
+      
+      const mouseEvent = new MouseEvent('mousedown', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+      });
+      this.renderer.domElement.dispatchEvent(mouseEvent);
+    }
+
+    
+
+    function onTouchEnd(event) {
+      //const touchebi datove endshic startshic da moveshic
+      const touch = event.changedTouches[0];
+      const marker = document.createElement('div');
+      marker.style.position = 'absolute';
+      marker.style.width = '10px';
+      marker.style.height = '10px';
+      marker.style.background = 'green';
+      marker.style.top = `${touch.clientY}px`;
+      marker.style.left = `${touch.clientX}px`;
+      document.body.appendChild(marker);
+    
+      setTimeout(() => marker.remove(), 1000);  // Remove after 1 second
+
+
+
+      event.preventDefault();
+
+      const mouseEvent = new MouseEvent('mouseup', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+      });
+      this.renderer.domElement.dispatchEvent(mouseEvent);
+    }
+
+    this.transformControls.addEventListener('change', () => {
+      this.renderer.render(this.scene, this.camera);
+    });
+
+    this.transformControls.addEventListener("dragging-changed", (event) => {
+      orbitControls.enabled = !event.value
+    });
   }
 
+
+ onTouchMove=(event)=>{
+    const touch = event.changedTouches[0];
+    const marker = document.createElement('div');
+    marker.style.position = 'absolute';
+    marker.style.width = '10px';
+    marker.style.height = '10px';
+    marker.style.background = 'blue';
+    marker.style.top = `${touch.clientY}px`;
+    marker.style.left = `${touch.clientX}px`;
+    document.body.appendChild(marker);
+  
+    setTimeout(() => marker.remove(), 1000);  // Remove after 1 second
+    document.querySelector('#test').innerHTML=this.scene.children.length;
+    this.scene.children[5].rotation.set(clientX * 10,10,10);
+
+
+    event.preventDefault();
+    
+    const mouseEvent = new MouseEvent('mousemove', {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    });
+    this.renderer.domElement.dispatchEvent(mouseEvent);
+  }
 
   /**
    * Run when the Start AR button is pressed.
@@ -139,14 +211,22 @@ class App {
       const clone = window.sunflower.clone();
       clone.position.copy(this.reticle.position);
       clone.scale.set(0.3,0.3,0.3);
+      this.transformControls.attach(clone);
+      this.transformControls.setMode("rotate");
       this.scene.add(clone);
+      
+
+      const interactionPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 2),
+        new THREE.MeshBasicMaterial({ visible: false }) // Invisible plane
+      );
+      interactionPlane.position.copy(clone.position);
+      this.scene.add(interactionPlane);
 
       const shadowMesh = this.scene.children.find(c => c.name === 'shadowMesh');
       shadowMesh.position.y = clone.position.y;
+      
       clicks++;
-
-      this.transformControls.attach(clone); // Attach the cloned sunflower to TransformControls
-      this.transformControls.setMode("rotate");
     }
   }
 
@@ -182,13 +262,15 @@ class App {
       const hitTestResults = frame.getHitTestResults(this.hitTestSource);
 
       // If we have results, consider the environment stabilized.
-      if (!this.stabilized && hitTestResults.length > 0) {
-        this.stabilized = true;
-        document.body.classList.add('stabilized');
-      }
+
 
       if (hitTestResults.length > 0) {
         const hitPose = hitTestResults[0].getPose(this.localReferenceSpace);
+
+        if (!this.stabilized && hitTestResults.length > 0) {
+          this.stabilized = true;
+          document.body.classList.add('stabilized');
+        }
 
         // Update the reticle position
         if(clicks < 1){
@@ -197,25 +279,19 @@ class App {
           this.reticle.visible = false;
         }
         
-        this.reticle.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z)
+        this.reticle.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z);
         this.reticle.updateMatrixWorld(true);
+
       }
 
-      if (this.clone) {
-        this.transformControls.update();
-        this.orbitControls.update();
-      }  
+      this.transformControls.update();
+      // this.orbitControls.update();
+      // this.camera.updateMatrixWorld(true);
       
       // Render the scene with THREE.WebGLRenderer.
-      this.renderer.render(this.scene, this.camera)
-    }
+      this.renderer.render(this.scene, this.camera);
+    } 
   }
-  
-  /**
-   * Initialize three.js specific rendering code, including a WebGLRenderer,
-   * a demo scene, and a camera for viewing the 3D content.
-   */
-  
 };
 
 window.app = new App();
