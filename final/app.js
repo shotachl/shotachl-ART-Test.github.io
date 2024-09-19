@@ -9,11 +9,6 @@
 
 let clicks = 0;
 
-let touchStartX = null;
-let touchEndX = null;
-// let touchPositionStart = null;
-// let touchPositionEnd = null;
-
 /**
  * Container class to manage connecting to the WebXR Device API
  * and handle rendering on every frame.
@@ -38,6 +33,7 @@ class App {
     this.reticle = new Reticle();
     this.scene.add(this.reticle);
     this.touchX;
+    this.lastTouchX;
 
     // We'll update the camera matrices directly from API, so
     // disable matrix auto updates so three.js doesn't attempt
@@ -45,144 +41,40 @@ class App {
     this.camera = new THREE.PerspectiveCamera();
     this.camera.matrixAutoUpdate = false;
 
-    // this.orbitControls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-    this.transformControls = new THREE.TransformControls(this.camera, this.renderer.domElement, this.renderer);
-    this.scene.add(this.transformControls);
-
-
-
-
-
-
-    // this.controllers = [new THREE.XRController(), new THREE.XRController()];
-    // this.controllers.forEach(controller => this.scene.add(controller));
-
-    // this.inputSources = {};
-
-
-
-
-
-    this.renderer.domElement.addEventListener('touchstart', onTouchStart, false);
     document.addEventListener('touchmove', this.onTouchMove);
-    this.renderer.domElement.addEventListener('touchend', onTouchEnd, false);
-    
-    function test(event){
-      const touch = event.changedTouches[0];
-      
-      if (this.scene) {
-        this.scene.rotation.set(touch.clientX,10,10);
-        document.querySelector('#test').innerHTML=this.scene;
-      }
-    }
-
-
-    function onTouchStart(event) {
-      const touch = event.changedTouches[0];
-      touchStartX = touch.clientX;
-      const marker = document.createElement('div');
-      marker.style.position = 'absolute';
-      marker.style.width = '10px';
-      marker.style.height = '10px';
-      marker.style.background = 'red';
-      marker.style.top = `${touch.clientY}px`;
-      marker.style.left = `${touch.clientX}px`;
-      document.body.appendChild(marker);
-    
-      setTimeout(() => marker.remove(), 1000);
-
-      event.preventDefault();
-      
-      const mouseEvent = new MouseEvent('mousedown', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-      });
-      this.renderer.domElement.dispatchEvent(mouseEvent);
-    }
-
-    
-
-    function onTouchEnd(event) {
-      const touch = event.changedTouches[0];
-      touchEndX = touch.clientX;
-
-      const marker = document.createElement('div');
-      marker.style.position = 'absolute';
-      marker.style.width = '10px';
-      marker.style.height = '10px';
-      marker.style.background = 'green';
-      marker.style.top = `${touch.clientY}px`;
-      marker.style.left = `${touch.clientX}px`;
-      document.body.appendChild(marker);
-    
-      setTimeout(() => marker.remove(), 1000);  // Remove after 1 second
-
-      // if (touchStartX !== null){
-      //   const distanceMoved = touchEndX - touchStartX;
-        
-      //   const rotationAmount = distanceMoved * 0.01;
-
-      //   this.scene.children[3].rotation.x += rotationAmount;
-
-      //   document.getElementById("test2").innerHTML = rotationAmount;
-
-
-      // }
-
-      const distanceMoved = touchEndX - touchStartX;
-        
-      const rotationAmount = distanceMoved * 0.01;
-
-      this.scene.children[3].rotation.x += rotationAmount;
-
-      document.getElementById("test2").innerHTML = distanceMoved;
-
-      event.preventDefault();
-
-      const mouseEvent = new MouseEvent('mouseup', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-      });
-      this.renderer.domElement.dispatchEvent(mouseEvent);
-    }
-
-    this.transformControls.addEventListener('change', () => {
-      this.renderer.render(this.scene, this.camera);
-    });
-
-    this.transformControls.addEventListener("dragging-changed", (event) => {
-      orbitControls.enabled = !event.value
-    });
+    document.addEventListener('touchend', this.onTouchEnd);
   }
 
 
- onTouchMove=(event)=>{
+ onTouchMove = (event) => {
     const touch = event.changedTouches[0];
-    const marker = document.createElement('div');
-    marker.style.position = 'absolute';
-    marker.style.width = '10px';
-    marker.style.height = '10px';
-    marker.style.background = 'blue';
-    marker.style.top = `${touch.clientY}px`;
-    marker.style.left = `${touch.clientX}px`;
-    document.body.appendChild(marker);
-  
-    setTimeout(() => marker.remove(), 1000);  // Remove after 1 second
-    // document.querySelector('#test').innerHTML=this.scene.children.length;
-    // this.scene.children[5].rotation.set(clientX * 10,10,10);
 
-    
+    const currentTouchX = touch.clientX;
+    const currentTouchY = touch.clientY;
 
-    event.preventDefault();
-    
+    const deltaX = currentTouchX - (this.touchX || currentTouchX);
+    const deltaY = currentTouchY - (this.touchY || currentTouchY);
+
+    this.scene.children[4].rotation.y += deltaX * 0.01;
+    this.scene.children[4].rotation.x += deltaY * 0.01;
+
+    this.touchX = currentTouchX;
+    this.touchY = currentTouchY;
+
+    // Update debug info if needed
+    // document.getElementById("test2").innerHTML = `DeltaX: ${deltaX}, DeltaY: ${deltaY}`;
+
     const mouseEvent = new MouseEvent('mousemove', {
-      clientX: touch.clientX,
-      clientY: touch.clientY
+      clientX: currentTouchX,
+      clientY: currentTouchY
     });
-    this.touchX = this.touchX || touch.clientX;
-    document.getElementById("test2").innerHTML = touch.clientX- this.touchX;
-    this.scene.children[5].rotation.y+=Math.abs(touch.clientX- this.touchX)*0.001;
     this.renderer.domElement.dispatchEvent(mouseEvent);
+
+  }
+
+  onTouchEnd = (event) => {
+    this.touchX = null;
+    this.touchY = null;
   }
 
   /**
@@ -193,25 +85,11 @@ class App {
       // Initialize a WebXR session using "immersive-ar".
       this.xrSession = await navigator.xr.requestSession("immersive-ar", {
         requiredFeatures: ['hit-test', 'dom-overlay'],
-
-
-
-
-
-
-        // requiredFeatures: ['hit-test', 'dom-overlay', 'controllers'],
-
-
-
-
-
         domOverlay: { root: document.body }
       });
 
       // Create the canvas that will contain our camera's background and our virtual scene.
       this.createXRCanvas();
-
-      /** this.orbitControls = new THREE.OrbitControls(this.camera, this.renderer.domElement); */
 
       // With everything set up, start the app.
       await this.onSessionStarted();
@@ -259,30 +137,7 @@ class App {
 
     this.xrSession.addEventListener("select", this.onSelect);
 
-    // this.xrSession.addEventListener('inputsourcechange', this.onInputSourceChange);
   }
-
-  // onInputSourceChange = (event) => {
-  //   if (event.added.length > 0) {
-  //     event.added.forEach(inputSource => {
-  //       const controller = this.controllers.find(c => !c.inputSource);
-  //       if (controller) {
-  //         controller.inputSource = inputSource;
-  //         console.log('Controller connected:', controller);
-  //       }
-  //     });
-  //   }
-  //   if (event.removed.length > 0) {
-  //     event.removed.forEach(inputSource => {
-  //       const controller = this.controllers.find(c => c.inputSource === inputSource);
-  //       if (controller) {
-  //         controller.inputSource = null;
-  //         console.log('Controller disconnected:', controller);
-  //       }
-  //     });
-  //   }
-  // }
-
 
   /** Place a sunflower when the screen is tapped. */
   onSelect = () => {
@@ -290,8 +145,6 @@ class App {
       const clone = window.sunflower.clone();
       clone.position.copy(this.reticle.position);
       clone.scale.set(0.3,0.3,0.3);
-      this.transformControls.attach(clone);
-      this.transformControls.setMode("rotate");
       this.scene.add(clone);
       
 
@@ -342,7 +195,6 @@ class App {
 
       // If we have results, consider the environment stabilized.
 
-
       if (hitTestResults.length > 0) {
         const hitPose = hitTestResults[0].getPose(this.localReferenceSpace);
 
@@ -362,10 +214,6 @@ class App {
         this.reticle.updateMatrixWorld(true);
       }
 
-      this.transformControls.update();
-      // this.orbitControls.update();
-      // this.camera.updateMatrixWorld(true);
-      
       // Render the scene with THREE.WebGLRenderer.
       this.renderer.render(this.scene, this.camera);
     } 
