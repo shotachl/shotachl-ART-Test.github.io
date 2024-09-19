@@ -9,6 +9,11 @@
 
 let clicks = 0;
 
+let touchStartX = null;
+let touchEndX = null;
+// let touchPositionStart = null;
+// let touchPositionEnd = null;
+
 /**
  * Container class to manage connecting to the WebXR Device API
  * and handle rendering on every frame.
@@ -17,6 +22,7 @@ class App {
   setupThreeJs() {
     // To help with working with 3D on the web, we'll use three.js.
     // Set up the WebGLRenderer, which handles rendering to our session's base layer.
+
     this.renderer = new THREE.WebGLRenderer({
       alpha: true,
       preserveDrawingBuffer: true,
@@ -31,8 +37,7 @@ class App {
     this.scene = DemoUtils.createLitScene();
     this.reticle = new Reticle();
     this.scene.add(this.reticle);
-
-  
+    this.touchX;
 
     // We'll update the camera matrices directly from API, so
     // disable matrix auto updates so three.js doesn't attempt
@@ -41,9 +46,22 @@ class App {
     this.camera.matrixAutoUpdate = false;
 
     // this.orbitControls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-    this.transformControls = new THREE.TransformControls(this.camera, this.renderer.domElement, renderer);
-
+    this.transformControls = new THREE.TransformControls(this.camera, this.renderer.domElement, this.renderer);
     this.scene.add(this.transformControls);
+
+
+
+
+
+
+    // this.controllers = [new THREE.XRController(), new THREE.XRController()];
+    // this.controllers.forEach(controller => this.scene.add(controller));
+
+    // this.inputSources = {};
+
+
+
+
 
     this.renderer.domElement.addEventListener('touchstart', onTouchStart, false);
     document.addEventListener('touchmove', this.onTouchMove);
@@ -57,8 +75,11 @@ class App {
         document.querySelector('#test').innerHTML=this.scene;
       }
     }
+
+
     function onTouchStart(event) {
       const touch = event.changedTouches[0];
+      touchStartX = touch.clientX;
       const marker = document.createElement('div');
       marker.style.position = 'absolute';
       marker.style.width = '10px';
@@ -69,7 +90,6 @@ class App {
       document.body.appendChild(marker);
     
       setTimeout(() => marker.remove(), 1000);
-
 
       event.preventDefault();
       
@@ -83,8 +103,9 @@ class App {
     
 
     function onTouchEnd(event) {
-      //const touchebi datove endshic startshic da moveshic
       const touch = event.changedTouches[0];
+      touchEndX = touch.clientX;
+
       const marker = document.createElement('div');
       marker.style.position = 'absolute';
       marker.style.width = '10px';
@@ -96,7 +117,25 @@ class App {
     
       setTimeout(() => marker.remove(), 1000);  // Remove after 1 second
 
+      // if (touchStartX !== null){
+      //   const distanceMoved = touchEndX - touchStartX;
+        
+      //   const rotationAmount = distanceMoved * 0.01;
 
+      //   this.scene.children[3].rotation.x += rotationAmount;
+
+      //   document.getElementById("test2").innerHTML = rotationAmount;
+
+
+      // }
+
+      const distanceMoved = touchEndX - touchStartX;
+        
+      const rotationAmount = distanceMoved * 0.01;
+
+      this.scene.children[3].rotation.x += rotationAmount;
+
+      document.getElementById("test2").innerHTML = distanceMoved;
 
       event.preventDefault();
 
@@ -129,9 +168,10 @@ class App {
     document.body.appendChild(marker);
   
     setTimeout(() => marker.remove(), 1000);  // Remove after 1 second
-    document.querySelector('#test').innerHTML=this.scene.children.length;
-    this.scene.children[5].rotation.set(clientX * 10,10,10);
+    // document.querySelector('#test').innerHTML=this.scene.children.length;
+    // this.scene.children[5].rotation.set(clientX * 10,10,10);
 
+    
 
     event.preventDefault();
     
@@ -139,6 +179,9 @@ class App {
       clientX: touch.clientX,
       clientY: touch.clientY
     });
+    this.touchX = this.touchX || touch.clientX;
+    document.getElementById("test2").innerHTML = touch.clientX- this.touchX;
+    this.scene.children[5].rotation.y+=Math.abs(touch.clientX- this.touchX)*0.001;
     this.renderer.domElement.dispatchEvent(mouseEvent);
   }
 
@@ -150,6 +193,18 @@ class App {
       // Initialize a WebXR session using "immersive-ar".
       this.xrSession = await navigator.xr.requestSession("immersive-ar", {
         requiredFeatures: ['hit-test', 'dom-overlay'],
+
+
+
+
+
+
+        // requiredFeatures: ['hit-test', 'dom-overlay', 'controllers'],
+
+
+
+
+
         domOverlay: { root: document.body }
       });
 
@@ -203,7 +258,31 @@ class App {
     this.xrSession.requestAnimationFrame(this.onXRFrame);
 
     this.xrSession.addEventListener("select", this.onSelect);
+
+    // this.xrSession.addEventListener('inputsourcechange', this.onInputSourceChange);
   }
+
+  // onInputSourceChange = (event) => {
+  //   if (event.added.length > 0) {
+  //     event.added.forEach(inputSource => {
+  //       const controller = this.controllers.find(c => !c.inputSource);
+  //       if (controller) {
+  //         controller.inputSource = inputSource;
+  //         console.log('Controller connected:', controller);
+  //       }
+  //     });
+  //   }
+  //   if (event.removed.length > 0) {
+  //     event.removed.forEach(inputSource => {
+  //       const controller = this.controllers.find(c => c.inputSource === inputSource);
+  //       if (controller) {
+  //         controller.inputSource = null;
+  //         console.log('Controller disconnected:', controller);
+  //       }
+  //     });
+  //   }
+  // }
+
 
   /** Place a sunflower when the screen is tapped. */
   onSelect = () => {
@@ -281,7 +360,6 @@ class App {
         
         this.reticle.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z);
         this.reticle.updateMatrixWorld(true);
-
       }
 
       this.transformControls.update();
