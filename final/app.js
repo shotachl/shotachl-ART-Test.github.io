@@ -41,10 +41,21 @@ class App {
     this.camera = new THREE.PerspectiveCamera();
     this.camera.matrixAutoUpdate = false;
 
+    document.addEventListener('touchstart', this.onTouchStart);
     document.addEventListener('touchmove', this.onTouchMove);
     document.addEventListener('touchend', this.onTouchEnd);
   }
 
+  
+
+  onTouchStart = (event) => {
+    if (event.touches.length === 2) {
+        this.touchStartDistance = null;
+        const dx = event.touches[0].clientX - event.touches[1].clientX;
+        const dy = event.touches[0].clientY - event.touches[1].clientY;
+        this.touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+    }
+};
 
  onTouchMove = (event) => {
     const touch = event.changedTouches[0];
@@ -58,9 +69,6 @@ class App {
     this.scene.children[4].rotation.y += deltaX * 0.01;
     this.scene.children[4].rotation.x += deltaY * 0.01;
 
-    this.touchX = currentTouchX;
-    this.touchY = currentTouchY;
-
     // Update debug info if needed
     // document.getElementById("test2").innerHTML = `DeltaX: ${deltaX}, DeltaY: ${deltaY}`;
 
@@ -68,11 +76,30 @@ class App {
       clientX: currentTouchX,
       clientY: currentTouchY
     });
-    this.renderer.domElement.dispatchEvent(mouseEvent);
 
+    this.renderer.domElement.dispatchEvent(mouseEvent);
+    
+    if (event.touches.length === 2 && this.touchStartDistance) {
+      const dx = event.touches[0].clientX - event.touches[1].clientX;
+      const dy = event.touches[0].clientY - event.touches[1].clientY;
+      const touchDistance = Math.sqrt(dx * dx + dy * dy);
+      
+      const scaleFactor = touchDistance / this.touchStartDistance;
+
+      const object = this.scene.children[4];
+      object.scale.set(object.scale.x * scaleFactor, object.scale.y * scaleFactor, object.scale.z * scaleFactor);
+
+      this.touchStartDistance = touchDistance;
+    }
+
+    this.touchX = currentTouchX;
+    this.touchY = currentTouchY;
   }
 
   onTouchEnd = (event) => {
+    if (event.touches.length < 2) {
+      this.touchStartDistance = null;
+    }
     this.touchX = null;
     this.touchY = null;
   }
