@@ -189,6 +189,13 @@ class App {
       const clone = window.sunflower.clone();
       clone.position.copy(this.reticle.position);
       clone.scale.set(0.3,0.3,0.3);
+
+      clone.traverse((child) => {
+        if (child.material && child.material.name === "rp_nathan_animated_003_mat.006") {
+          child.visible = false; // Hides the child with the specific material
+        }
+      });
+
       this.scene.add(clone);
       this.lastClone = clone;
 
