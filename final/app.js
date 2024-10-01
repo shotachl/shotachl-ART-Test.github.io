@@ -1,5 +1,6 @@
 (async function() {
   const isArSessionSupported = navigator.xr && navigator.xr.isSessionSupported && await navigator.xr.isSessionSupported("immersive-ar");
+  document.getElementById("buttonid").style.display = "none";
   if (isArSessionSupported) {
     document.getElementById("enter-ar").addEventListener("click", window.app.activateXR)
   } else {
@@ -34,6 +35,7 @@ class App {
     this.scene.add(this.reticle);
     this.touchX;
     this.lastTouchX;
+    this.button = document.getElementById("buttonid");
 
     // We'll update the camera matrices directly from API, so
     // disable matrix auto updates so three.js doesn't attempt
@@ -44,9 +46,8 @@ class App {
     document.addEventListener('touchstart', this.onTouchStart);
     document.addEventListener('touchmove', this.onTouchMove);
     document.addEventListener('touchend', this.onTouchEnd);
+    this.button.addEventListener('click', this.onButtonClick);
   }
-
-  
 
   onTouchStart = (event) => {
     if (event.touches.length === 2) {
@@ -58,6 +59,7 @@ class App {
 };
 
  onTouchMove = (event) => {
+    if (!this.lastClone) return;
     const touch = event.changedTouches[0];
 
     const currentTouchX = touch.clientX;
@@ -66,8 +68,8 @@ class App {
     const deltaX = currentTouchX - (this.touchX || currentTouchX);
     const deltaY = currentTouchY - (this.touchY || currentTouchY);
 
-    this.scene.children[4].rotation.y += deltaX * 0.01;
-    this.scene.children[4].rotation.x += deltaY * 0.01;
+    this.lastClone.rotation.y += deltaX * 0.01;
+    this.lastClone.rotation.x += deltaY * 0.01;
 
     // Update debug info if needed
     // document.getElementById("test2").innerHTML = `DeltaX: ${deltaX}, DeltaY: ${deltaY}`;
@@ -86,8 +88,14 @@ class App {
       
       const scaleFactor = touchDistance / this.touchStartDistance;
 
-      const object = this.scene.children[4];
-      object.scale.set(object.scale.x * scaleFactor, object.scale.y * scaleFactor, object.scale.z * scaleFactor);
+      this.lastClone.scale.set(
+        this.lastClone.scale.x * scaleFactor, 
+        this.lastClone.scale.y * scaleFactor, 
+        this.lastClone.scale.z * scaleFactor
+      );
+
+      // const head = this.scene.children[1];
+      // head.scale.set(object.scale.x * scaleFactor, object.scale.y * scaleFactor, object.scale.z * scaleFactor);
 
       this.touchStartDistance = touchDistance;
     }
@@ -102,6 +110,16 @@ class App {
     }
     this.touchX = null;
     this.touchY = null;
+  }
+
+  onButtonClick = () => {
+    this.scene.remove(this.lastClone);
+    this.lastClone = null;
+    clicks = 0;
+
+    if(this.lastClone = null && clicks == 0){
+      this.reticle.visible = true;
+    }
   }
 
   /**
@@ -163,7 +181,6 @@ class App {
     this.xrSession.requestAnimationFrame(this.onXRFrame);
 
     this.xrSession.addEventListener("select", this.onSelect);
-
   }
 
   /** Place a sunflower when the screen is tapped. */
@@ -173,7 +190,7 @@ class App {
       clone.position.copy(this.reticle.position);
       clone.scale.set(0.3,0.3,0.3);
       this.scene.add(clone);
-      
+      this.lastClone = clone;
 
       const interactionPlane = new THREE.Mesh(
         new THREE.PlaneGeometry(2, 2),
@@ -235,6 +252,7 @@ class App {
           this.reticle.visible = true;
         }else if(clicks >= 1){
           this.reticle.visible = false;
+          this.button.style.display = "block";
         }
         
         this.reticle.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z);
